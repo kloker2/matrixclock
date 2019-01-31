@@ -1,7 +1,7 @@
 #ifndef HT1632_H
 #define HT1632_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #ifndef MATRIX_CNT
 #define MATRIX_CNT                  4

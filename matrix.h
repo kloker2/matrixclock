@@ -1,7 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define MATRIX_SCROLL_STOP          0
 #define MATRIX_SCROLL_START         1
@@ -75,7 +75,7 @@ extern uint8_t fb[MATRIX_BUFFER_SIZE];
 
 void matrixInit(void);
 
-void matrixSetBrightness(uint8_t brightness);
+void matrixSetBrightness(int8_t brightness);
 
 void matrixSwitchBuf(uint32_t mask, int8_t effect);
 

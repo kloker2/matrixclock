@@ -33,8 +33,8 @@ void alarmNextEditParam(void)
 void alarmChange(int8_t diff)
 {
     int8_t *alrm = (int8_t *)&alarm + alarm.eam;
-    int8_t alrmMax = pgm_read_byte((int8_t *)&alarmMax + alarm.eam);
-    int8_t alrmMin = pgm_read_byte((int8_t *)&alarmMin + alarm.eam);
+    const int8_t alrmMax = (int8_t)pgm_read_byte((const int8_t *)&alarmMax + alarm.eam);
+    const int8_t alrmMin = (int8_t)pgm_read_byte((const int8_t *)&alarmMin + alarm.eam);
 
     *alrm += diff;
 

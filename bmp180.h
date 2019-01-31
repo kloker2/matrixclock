@@ -1,7 +1,7 @@
 #ifndef BMP180_H
 #define BMP180_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define BMP180_ADDR                 0xEE
 

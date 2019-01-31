@@ -3,7 +3,7 @@
 #include <avr/pgmspace.h>
 #include "pins.h"
 
-static void ht1632SendBits(uint8_t cnt, uint8_t bits)
+static void ht1632SendBits(int8_t cnt, uint8_t bits)
 {
     int8_t i;
 

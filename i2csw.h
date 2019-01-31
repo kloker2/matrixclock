@@ -1,7 +1,7 @@
 #ifndef I2CSW_H
 #define I2CSW_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define I2C_NOACK   0
 #define I2C_ACK     1

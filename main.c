@@ -49,7 +49,7 @@ int main(void)
 
     while (1) {
         // Update sensors with SENSOR_POLL_INTERVAL period
-        if (!sensTimer == 0) {
+        if (sensTimer == 0) {
             sensTimer = SENSOR_POLL_INTERVAL;
             ds18x20Process();
             if (bmp180HaveSensor())

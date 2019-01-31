@@ -1,7 +1,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <inttypes.h>
+#include <stdint.h>
+
 #include "matrix.h"
 
 #define PARAM_UP                1
@@ -74,22 +75,22 @@ void displayInit(void);
 void displaySwitchHourSignal(void);
 void displaySwitchHourZero(void);
 void displaySwitchBigNum(void);
-void displayChangeRotate();
+void displayChangeRotate(void);
 void displaySetDirection(int8_t dir);
-void displayChangeTime();
-void displayChangeAlarm();
+void displayChangeTime(void);
+void displayChangeAlarm(void);
 
 void startScroll(uint8_t type);
 
 void showTime(uint32_t mask);
 void showTimeMasked(void);
 void showMainScreen(void);
-void showTimeEdit();
-void showAlarmEdit();
+void showTimeEdit(void);
+void showAlarmEdit(void);
 void showTest(void);
 
-void changeBrightness();
-void changeCorrection();
+void changeBrightness(void);
+void changeCorrection(void);
 void showBrightness(uint32_t mask);
 void showCorrection(uint32_t mask);
 void checkAlarm(void);

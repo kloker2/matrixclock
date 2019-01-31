@@ -29,12 +29,12 @@ static volatile uint8_t scrollData = 0x00;
 
 static volatile uint8_t scrollMode = MATRIX_SCROLL_OFF;
 
-static void matrixLoadCharFb(uint8_t code, uint8_t numSize)
+static void matrixLoadCharFb(char code, uint8_t numSize)
 {
     uint8_t i;
     uint8_t data;
     const uint8_t *oft;
-    uint8_t chOft;
+    char chOft;
 
     const uint8_t *font = font_cp1251_08;
     uint8_t width = MATRIX_FONT_WIDTH;
@@ -58,7 +58,7 @@ static void matrixLoadCharFb(uint8_t code, uint8_t numSize)
     } else {
         chOft = code - ' ';
         // TODO: Remove it with full font
-        if (code > 128)
+        if (code & 0x80)
             chOft -= 0x20;
     }
 
@@ -81,7 +81,7 @@ static void matrixLoadCharFb(uint8_t code, uint8_t numSize)
         fbNew[_col++] = 0x00;
 }
 
-static void matrixLoadScrollChar(uint8_t ch)
+static void matrixLoadScrollChar(char ch)
 {
     fbStr[fbStrPos++] = ch;
     fbStr[fbStrPos] = '\0';
@@ -93,13 +93,13 @@ void matrixInit(void)
     scrollTimer = eep.scrollInterval;
 }
 
-void matrixSetBrightness(uint8_t brightness)
+void matrixSetBrightness(int8_t brightness)
 {
     if (scrollMode == MATRIX_SCROLL_OFF) {
 #if defined(_HT1632)
-        ht1632SendCmd(HT1632_CMD_DUTY | brightness);
+        ht1632SendCmd((uint8_t)(HT1632_CMD_DUTY | brightness));
 #else
-        max7219SendCmd(MAX7219_INTENSITY, brightness);
+        max7219SendCmd(MAX7219_INTENSITY, (uint8_t)brightness);
 #endif
     }
 }
@@ -179,13 +179,13 @@ void matrixScrollAndADCInit(void)
 ISR (TIMER2_OVF_vect)
 {
     int8_t i;
-    uint8_t code;
+    char code;
 
     if (scrollMode == MATRIX_SCROLL_ON) {
         if (*ptrStr) {
             if (chCol < 5) {
                 code = *ptrStr;
-                code -= (code > 128 ? 0x40 : 0x20);
+                code -= (code & 0x80 ? 0x40 : 0x20);
                 scrollData = pgm_read_byte(font_cp1251_08 + code * 5 + chCol);
                 if (scrollData == VOID)
                     chCol = 5;
@@ -241,13 +241,13 @@ void matrixScrollAddString(char *string)
 
 void matrixScrollAddStringEeprom(uint8_t *string)
 {
-    uint8_t ch;
+    char ch;
     uint8_t i = 0;
 
-    ch = eeprom_read_byte(&string[i++]);
+    ch = (char)eeprom_read_byte(&string[i++]);
     while (ch) {
         matrixLoadScrollChar(ch);
-        ch = eeprom_read_byte(&string[i++]);
+        ch = (char)eeprom_read_byte(&string[i++]);
     }
 }
 
@@ -267,9 +267,9 @@ void matrixFbNewAddStringEeprom(uint8_t *string)
 inline uint8_t swapBits(uint8_t data) __attribute__((always_inline));
 inline uint8_t swapBits(uint8_t data)
 {
-    data = (data & 0xF0) >> 4 | (data & 0x0F) << 4;
-    data = (data & 0xCC) >> 2 | (data & 0x33) << 2;
-    data = (data & 0xAA) >> 1 | (data & 0x55) << 1;
+    data = ((data & 0xF0) >> 4) | ((data << 4) & 0xF0);
+    data = ((data & 0xCC) >> 2) | ((data << 2) & 0xCC);
+    data = ((data & 0xAA) >> 1) | ((data << 1) & 0xAA);
 
     return data;
 }

@@ -1,7 +1,7 @@
 #ifndef EEPROM_H
 #define EEPROM_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define EEPROM_ALARM_HOUR           0x00
 #define EEPROM_ALARM_MIN            0x01

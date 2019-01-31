@@ -13,17 +13,17 @@ static void rtcWeekDay(void)
     uint8_t a, y, m;
 
     a = (rtc.month > 2 ? 0 : 1);
-    y = 12 + rtc.year - a;
-    m = rtc.month + 12 * a - 2;
+    y = (uint8_t)(12 + rtc.year - a);
+    m = (uint8_t)(rtc.month + 12 * a - 2);
 
     rtc.wday = (rtc.date + y + (y / 4) + ((31 * m) / 12)) % 7;
     if (rtc.wday == 0)
         rtc.wday = 7;
 }
 
-static uint8_t rtcDaysInMonth(void)
+static int8_t rtcDaysInMonth(void)
 {
-    uint8_t ret = rtc.month;
+    int8_t ret = rtc.month;
 
     if (ret == 2) {
         ret = rtc.year & 0x03;
@@ -47,7 +47,7 @@ void rtcReadTime(void)
     I2CswStart(RTC_I2C_ADDR | I2C_READ);
     for (i = RTC_SEC; i <= RTC_YEAR; i++) {
         temp = I2CswReadByte((i == RTC_YEAR) ? I2C_NOACK : I2C_ACK);
-        *((int8_t *)&rtc + i) = rtcBinDecToDec(temp);
+        *((int8_t *)&rtc + i) = (int8_t)rtcBinDecToDec(temp);
     }
     I2CswStop();
 }
@@ -56,14 +56,13 @@ void rtcCorrSec(void)
 {
     I2CswStart(RTC_I2C_ADDR);
     I2CswWriteByte(RTC_SEC);
-    I2CswWriteByte(rtcDecToBinDec(rtc.sec));
+    I2CswWriteByte(rtcDecToBinDec((uint8_t)rtc.sec));
     I2CswStop();
 }
 
 static void rtcSaveTime(void)
 {
-    uint8_t i;
-    uint8_t etm = rtc.etm;
+    int8_t etm = rtc.etm;
 
     if (etm > RTC_WDAY) {
         rtcWeekDay();
@@ -71,12 +70,12 @@ static void rtcSaveTime(void)
     }
 
     I2CswStart(RTC_I2C_ADDR);
-    I2CswWriteByte(etm);
+    I2CswWriteByte((uint8_t)etm);
     if (etm == RTC_SEC) {
         I2CswWriteByte(0);
     } else {
-        for (i = etm; i <= RTC_YEAR; i++)
-            I2CswWriteByte(rtcDecToBinDec(*((int8_t *)&rtc + i)));
+        for (int8_t i = etm; i <= RTC_YEAR; i++)
+            I2CswWriteByte(rtcDecToBinDec(*((uint8_t *)&rtc + i)));
     }
 
     I2CswStop();
@@ -105,8 +104,8 @@ void rtcNextEditParam(void)
 void rtcChangeTime(int8_t diff)
 {
     int8_t *time = (int8_t *)&rtc + rtc.etm;
-    int8_t timeMax = pgm_read_byte((int8_t *)&rtcMax + rtc.etm);
-    int8_t timeMin = pgm_read_byte((int8_t *)&rtcMin + rtc.etm);
+    int8_t timeMax = (int8_t)pgm_read_byte((const int8_t *)&rtcMax + rtc.etm);
+    int8_t timeMin = (int8_t)pgm_read_byte((const int8_t *)&rtcMin + rtc.etm);
 
     if (rtc.etm == RTC_DATE)
         timeMax = rtcDaysInMonth();
@@ -130,5 +129,5 @@ uint8_t rtcBinDecToDec(uint8_t num)
 
 uint8_t rtcDecToBinDec(uint8_t num)
 {
-    return ((num / 10) << 4) + (num % 10);
+    return (uint8_t)((num / 10) << 4) + (num % 10);
 }

@@ -17,7 +17,7 @@ static uint16_t bmp180ReadI2CWord(uint8_t addr)
     I2CswStart(BMP180_ADDR);
     I2CswWriteByte(addr);
     I2CswStart(BMP180_ADDR | I2C_READ);
-    ret = ((uint16_t)I2CswReadByte(I2C_ACK)) << 8;
+    ret = (((uint16_t)I2CswReadByte(I2C_ACK)) << 8) & 0xFF00;
     ret |= I2CswReadByte(I2C_NOACK);
     I2CswStop();
 
@@ -35,7 +35,7 @@ void bmp180Init(void)
             bmp180Sensor = 0;                                       // No valid sensor on bus
             return;
         }
-        cd.arr[i] = param;
+        cd.arr[i] = (int16_t)param;
     }
 
     bmp180Sensor = 1;

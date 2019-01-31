@@ -1,7 +1,7 @@
 #ifndef ALARM_H
 #define ALARM_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 enum {
     ALARM_HOUR = 0,
@@ -31,7 +31,7 @@ typedef struct {
 
 extern Alarm_type alarm;
 
-#define ALARM_NOEDIT        0xFF
+#define ALARM_NOEDIT        ((int8_t)0xFF)
 
 void alarmInit(void);
 void alarmSave(void);

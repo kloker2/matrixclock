@@ -64,7 +64,7 @@ ISR (TIMER0_OVF_vect)                                   // 31250 / (256 - 131) =
         if (btnNow == btnPrev) {
             btnCnt++;
             if (btnCnt == LONG_PRESS)
-                cmdBuf = (btnPrev << 4);
+                cmdBuf = (uint8_t)(btnPrev << 4);
         } else {
             btnPrev = btnNow;
         }

@@ -11,20 +11,20 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 
-uint8_t *txtLabels[LABEL_END];              // Array with text label pointers
+static uint8_t *txtLabels[LABEL_END];              // Array with text label pointers
 
-#define PARAM_FF    0xFF
+#define PARAM_FF    ((int8_t)0xFF)
 
-static uint8_t paramOld = PARAM_FF;
+static int8_t paramOld = PARAM_FF;
 static uint8_t firstSensor;
 static uint8_t scrollType;
 static int8_t direction = PARAM_UP;
 
-static char *mkNumberString(int16_t value, uint8_t width, uint8_t lead)
+static char *mkNumberString(int16_t value, uint8_t width, char lead)
 {
     static char strbuf[8];
 
-    uint8_t sign = lead;
+    char sign = lead;
     int8_t pos;
 
     if (value < 0) {
@@ -185,8 +185,8 @@ static void updateColon(void)
     uint8_t digit = rtc.sec & 0x01;
 
     if (eep.bigNum == NUM_BIG) {
-        fb[11] = (!digit) << 7;
-        fb[12] = digit << 7;
+        fb[11] = digit ? 0x00 : 0x80;
+        fb[12] = digit ? 0x80 : 0x00;
 #if MATRIX_CNT == 4
     } else if (eep.bigNum == NUM_EXTRA) {
         colon = pgm_read_byte(&colonCode[digit + 2]);
@@ -252,7 +252,7 @@ void displaySwitchBigNum(void)
     saveEeParam();
 }
 
-void displayChangeRotate()
+void displayChangeRotate(void)
 {
     eep.rotate += direction;
     saveEeParam();
@@ -263,11 +263,11 @@ void displaySetDirection(int8_t dir)
     direction = dir;
 }
 
-void displayChangeTime()
+void displayChangeTime(void)
 {
     rtcChangeTime(direction);
 }
-void displayChangeAlarm()
+void displayChangeAlarm(void)
 {
     alarmChange(direction);
 }
@@ -316,11 +316,11 @@ void showTime(uint32_t mask)
     }
 #endif
 
-    mask = updateMask(mask, eep.bigNum, rtcDecToBinDec(rtc.hour), rtcDecToBinDec(rtc.min));
+    mask = updateMask(mask, eep.bigNum, rtcDecToBinDec((uint8_t)rtc.hour), rtcDecToBinDec((uint8_t)rtc.min));
 
 #if MATRIX_CNT == 4
     if (eep.bigNum != NUM_EXTRA) {
-        digit = rtcDecToBinDec(rtc.sec);
+        digit = rtcDecToBinDec((uint8_t)rtc.sec);
         if ((oldSec ^ digit) & 0xF0) {
             if (eep.bigNum == NUM_NORMAL)
                 mask |= MASK_SEC_TENS;
@@ -391,7 +391,7 @@ static void showParam(uint32_t mask, int8_t value, uint8_t label, char icon)
     static char oldIcon = '=';
 
     showParamEdit(value, label, icon);
-    mask = updateMask(mask, NUM_NORMAL, rtcDecToBinDec(value), 0);
+    mask = updateMask(mask, NUM_NORMAL, rtcDecToBinDec((uint8_t)value), 0);
     if (oldIcon != icon) {
         mask |= MASK_ICON;
         oldIcon = icon;
@@ -400,7 +400,7 @@ static void showParam(uint32_t mask, int8_t value, uint8_t label, char icon)
     paramOld = value;
 }
 
-void showTimeEdit()
+void showTimeEdit(void)
 {
     uint32_t mask = MASK_NONE;
 
@@ -409,12 +409,12 @@ void showTimeEdit()
     if (paramOld != rtc.etm)
         mask = MASK_ALL;
 
-    showParam(mask, time, LABEL_SECOND + rtc.etm, ICON_TIME);
+    showParam(mask, time, (uint8_t)(LABEL_SECOND + rtc.etm), ICON_TIME);
 
     paramOld = rtc.etm;
 }
 
-void showAlarmEdit()
+void showAlarmEdit(void)
 {
     uint32_t mask = MASK_NONE;
 
@@ -423,9 +423,9 @@ void showAlarmEdit()
     uint8_t label;
 
     if (alarm.eam > ALARM_MIN) {
-        label = LABEL_MO + alarm.eam - ALARM_MON;
+        label = (uint8_t)(LABEL_MO + alarm.eam - ALARM_MON);
     } else {
-        label = LABEL_HOUR - alarm.eam;
+        label = (uint8_t)(LABEL_HOUR - alarm.eam);
     }
 
     if (paramOld != alarm.eam)
@@ -447,7 +447,7 @@ void showTest(void)
     matrixSwitchBuf(MASK_ALL, MATRIX_EFFECT_NONE);
 }
 
-void changeBrightness()
+void changeBrightness(void)
 {
     eep.brMax += direction;
     eep.brMax &= 0x0F;
@@ -455,7 +455,7 @@ void changeBrightness()
     saveEeParam();
 }
 
-void changeCorrection()
+void changeCorrection(void)
 {
     eep.corr += direction;
     if (eep.corr > 55 || eep.corr < -55) {

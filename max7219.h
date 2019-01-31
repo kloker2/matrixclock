@@ -1,7 +1,7 @@
 #ifndef MAX7219_H
 #define MAX7219_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #ifdef _MAX7219_X3
 #define _MAX7219

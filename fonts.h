@@ -1,7 +1,7 @@
 #ifndef FONTS_H
 #define FONTS_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 // This font data printed
 #define VOID        0xA5

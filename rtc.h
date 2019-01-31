@@ -1,7 +1,7 @@
 #ifndef RTC_H
 #define RTC_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define RTC_I2C_ADDR        0xD0
 
@@ -29,7 +29,7 @@ typedef struct {
 
 extern RTC_type rtc;
 
-#define RTC_NOEDIT          0xFF
+#define RTC_NOEDIT          ((int8_t)0xFF)
 
 void rtcReadTime(void);
 void rtcCorrSec(void);

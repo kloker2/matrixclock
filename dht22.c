@@ -79,12 +79,12 @@ void dht22Read(void)
     }
 }
 
-int16_t dht22GetHumidity()
+int16_t dht22GetHumidity(void)
 {
     return humidity;
 }
 
-int16_t dht22GetTemp()
+int16_t dht22GetTemp(void)
 {
     return temp;
 }

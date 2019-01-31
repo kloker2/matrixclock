@@ -1,7 +1,7 @@
 #ifndef DHT22_H
 #define DHT22_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 typedef union {
     struct {
@@ -18,9 +18,9 @@ void dht22Init(void);
 
 void dht22Read(void);
 
-int16_t dht22GetHumidity();
+int16_t dht22GetHumidity(void);
 
-int16_t dht22GetTemp();
+int16_t dht22GetTemp(void);
 
 uint8_t dht22HaveSensor(void);
 

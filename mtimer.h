@@ -1,7 +1,7 @@
 #ifndef MTIMER_H
 #define MTIMER_H
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #define TEMP_MEASURE_TIME       2
 #define SENSOR_POLL_INTERVAL    10

@@ -1,8 +1,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <stdint.h>
-
+#include <inttypes.h>
 #include "matrix.h"
 
 #define PARAM_UP                1
@@ -72,27 +71,21 @@ enum {
 };
 
 void displayInit(void);
-void displaySwitchHourSignal(void);
-void displaySwitchHourZero(void);
-void displaySwitchBigNum(void);
-void displayChangeRotate(void);
 void displaySetDirection(int8_t dir);
-void displayChangeTime(void);
-void displayChangeAlarm(void);
+void displayChangeTime();
+void displayChangeAlarm();
 
 void startScroll(uint8_t type);
 
 void showTime(uint32_t mask);
 void showTimeMasked(void);
 void showMainScreen(void);
-void showTimeEdit(void);
-void showAlarmEdit(void);
+void showTimeEdit();
+void showAlarmEdit();
 void showTest(void);
 
-void changeBrightness(void);
-void changeCorrection(void);
-void showBrightness(uint32_t mask);
-void showCorrection(uint32_t mask);
+void showBrightness(uint8_t masked);
+void showCorrection(uint8_t masked);
 void checkAlarm(void);
 void calcBrightness(void);
 

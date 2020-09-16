@@ -11,20 +11,20 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 
-static uint8_t *txtLabels[LABEL_END];              // Array with text label pointers
+uint8_t *txtLabels[LABEL_END];              // Array with text label pointers
 
-#define PARAM_FF    ((int8_t)0xFF)
+#define PARAM_FF    0xFF
 
-static int8_t paramOld = PARAM_FF;
+static uint8_t paramOld = PARAM_FF;
 static uint8_t firstSensor;
 static uint8_t scrollType;
 static int8_t direction = PARAM_UP;
 
-static char *mkNumberString(int16_t value, uint8_t width, char lead)
+static char *mkNumberString(int16_t value, uint8_t width, uint8_t lead)
 {
     static char strbuf[8];
 
-    char sign = lead;
+    uint8_t sign = lead;
     int8_t pos;
 
     if (value < 0) {
@@ -89,7 +89,7 @@ static void loadPlaceString(uint8_t label)
 static void loadTempString(void)
 {
     uint8_t i;
-    uint8_t sm = eep.sensMask;
+    uint8_t sm = eeParamGet()->sensMask;
 
     firstSensor = 1;
 
@@ -181,14 +181,17 @@ static void updateColon(void)
         0x32, 0x26, 0x46, 0x62
     };
 
+    EE_Param *eep = eeParamGet();
+
     uint8_t colon = 0;
     uint8_t digit = rtc.sec & 0x01;
+    uint8_t bigNum = eep->bigNum;
 
-    if (eep.bigNum == NUM_BIG) {
-        fb[11] = digit ? 0x00 : 0x80;
-        fb[12] = digit ? 0x80 : 0x00;
+    if (bigNum == NUM_BIG) {
+        fb[11] = (!digit) << 7;
+        fb[12] = digit << 7;
 #if MATRIX_CNT == 4
-    } else if (eep.bigNum == NUM_EXTRA) {
+    } else if (bigNum == NUM_EXTRA) {
         colon = pgm_read_byte(&colonCode[digit + 2]);
         fb[15] = colon;
         fb[16] = colon;
@@ -197,13 +200,8 @@ static void updateColon(void)
         colon = pgm_read_byte(&colonCode[digit]);
         fb[10] = colon;
         fb[11] = colon;
-        fb[WEEKDAY_POS] = alarmRawWeekday() | (eep.hourSignal ? 0x80 : 0x00);
+        fb[WEEKDAY_POS] = alarmRawWeekday() | (eep->hourSignal ? 0x80 : 0x00);
     }
-}
-
-static void saveEeParam(void)
-{
-    eeprom_update_block(&eep, (void *)EEPROM_HOURSIGNAL, sizeof(EE_Param));
 }
 
 void displayInit(void)
@@ -211,7 +209,7 @@ void displayInit(void)
     uint8_t i;
     uint8_t *addr;
 
-    eeprom_read_block(&eep, (void *)EEPROM_HOURSIGNAL, sizeof(EE_Param));
+    eeprom_read_block(eeParamGet(), (void *)EEPROM_HOURSIGNAL, sizeof(EE_Param));
 
     matrixInit();
 
@@ -233,41 +231,17 @@ void displayInit(void)
     }
 }
 
-void displaySwitchHourSignal(void)
-{
-    eep.hourSignal = !eep.hourSignal;
-    saveEeParam();
-}
-
-void displaySwitchHourZero(void)
-{
-    eep.hourSignal = !eep.hourSignal;
-    saveEeParam();
-}
-
-void displaySwitchBigNum(void)
-{
-    if (++eep.bigNum >= NUM_SMALL)
-        eep.bigNum = NUM_NORMAL;
-    saveEeParam();
-}
-
-void displayChangeRotate(void)
-{
-    eep.rotate += direction;
-    saveEeParam();
-}
 
 void displaySetDirection(int8_t dir)
 {
     direction = dir;
 }
 
-void displayChangeTime(void)
+void displayChangeTime()
 {
     rtcChangeTime(direction);
 }
-void displayChangeAlarm(void)
+void displayChangeAlarm()
 {
     alarmChange(direction);
 }
@@ -293,22 +267,26 @@ void showTime(uint32_t mask)
 
     paramOld = PARAM_FF;
 
-    matrixSetX(0);
-    matrixFbNewAddString(mkNumberString(rtc.hour, 2, eep.hourZero ? '0' : ' '), eep.bigNum);
+    EE_Param *eep = eeParamGet();
 
-    if (eep.bigNum == NUM_BIG)
+    uint8_t bigNum = eep->bigNum;
+
+    matrixSetX(0);
+    matrixFbNewAddString(mkNumberString(rtc.hour, 2, eep->hourZero ? '0' : ' '), bigNum);
+
+    if (bigNum == NUM_BIG)
         matrixSetX(13);
 #if MATRIX_CNT == 4
-    else if (eep.bigNum == NUM_EXTRA)
+    else if (bigNum == NUM_EXTRA)
         matrixSetX(19);
 #endif
     else
         matrixSetX(13);
-    matrixFbNewAddString(mkNumberString(rtc.min, 2, '0'), eep.bigNum);
+    matrixFbNewAddString(mkNumberString(rtc.min, 2, '0'), bigNum);
 
 #if MATRIX_CNT == 4
-    if (eep.bigNum != NUM_EXTRA) {
-        if (eep.bigNum == NUM_NORMAL)
+    if (bigNum != NUM_EXTRA) {
+        if (bigNum == NUM_NORMAL)
             matrixSetX(SECONDS_POS);
         else
             matrixSetX(SECONDS_POS_BIG);
@@ -316,19 +294,19 @@ void showTime(uint32_t mask)
     }
 #endif
 
-    mask = updateMask(mask, eep.bigNum, rtcDecToBinDec((uint8_t)rtc.hour), rtcDecToBinDec((uint8_t)rtc.min));
+    mask = updateMask(mask, bigNum, rtcDecToBinDec((uint8_t)rtc.hour), rtcDecToBinDec((uint8_t)rtc.min));
 
 #if MATRIX_CNT == 4
-    if (eep.bigNum != NUM_EXTRA) {
-        digit = rtcDecToBinDec((uint8_t)rtc.sec);
+    if (bigNum != NUM_EXTRA) {
+        digit = rtcDecToBinDec(rtc.sec);
         if ((oldSec ^ digit) & 0xF0) {
-            if (eep.bigNum == NUM_NORMAL)
+            if (bigNum == NUM_NORMAL)
                 mask |= MASK_SEC_TENS;
             else
                 mask |= MASK_SEC_TENS_BIG;
         }
         if ((oldSec ^ digit) & 0x0F) {
-            if (eep.bigNum == NUM_NORMAL)
+            if (bigNum == NUM_NORMAL)
                 mask |= MASK_SEC_UNITS;
             else
                 mask |= MASK_SEC_UNITS_BIG;
@@ -386,12 +364,14 @@ static void showParamEdit(int8_t value, uint8_t label, char icon)
 #endif
 }
 
-static void showParam(uint32_t mask, int8_t value, uint8_t label, char icon)
+static void showParam(uint8_t masked, int8_t value, uint8_t label, char icon)
 {
     static char oldIcon = '=';
 
+    uint32_t mask = masked ? MASK_ALL : MASK_NONE;
+
     showParamEdit(value, label, icon);
-    mask = updateMask(mask, NUM_NORMAL, rtcDecToBinDec((uint8_t)value), 0);
+    mask = updateMask(mask, NUM_NORMAL, rtcDecToBinDec(value), 0);
     if (oldIcon != icon) {
         mask |= MASK_ICON;
         oldIcon = icon;
@@ -400,38 +380,32 @@ static void showParam(uint32_t mask, int8_t value, uint8_t label, char icon)
     paramOld = value;
 }
 
-void showTimeEdit(void)
+void showTimeEdit()
 {
-    uint32_t mask = MASK_NONE;
-
     int8_t time = *((int8_t *)&rtc + rtc.etm);
 
-    if (paramOld != rtc.etm)
-        mask = MASK_ALL;
+    uint8_t masked = (paramOld != rtc.etm);
 
-    showParam(mask, time, (uint8_t)(LABEL_SECOND + rtc.etm), ICON_TIME);
+    showParam(masked, time, LABEL_SECOND + rtc.etm, ICON_TIME);
 
     paramOld = rtc.etm;
 }
 
-void showAlarmEdit(void)
+void showAlarmEdit()
 {
-    uint32_t mask = MASK_NONE;
-
     int8_t alrm = *((int8_t *)&alarm + alarm.eam);
 
     uint8_t label;
 
     if (alarm.eam > ALARM_MIN) {
-        label = (uint8_t)(LABEL_MO + alarm.eam - ALARM_MON);
+        label = LABEL_MO + alarm.eam - ALARM_MON;
     } else {
-        label = (uint8_t)(LABEL_HOUR - alarm.eam);
+        label = LABEL_HOUR - alarm.eam;
     }
 
-    if (paramOld != alarm.eam)
-        mask = MASK_ALL;
+    uint8_t masked = (paramOld != alarm.eam);
 
-    showParam(mask, alrm, label, ICON_ALARM);
+    showParam(masked, alrm, label, ICON_ALARM);
 
     paramOld = alarm.eam;
 }
@@ -447,41 +421,25 @@ void showTest(void)
     matrixSwitchBuf(MASK_ALL, MATRIX_EFFECT_NONE);
 }
 
-void changeBrightness(void)
+void showBrightness(uint8_t masked)
 {
-    eep.brMax += direction;
-    eep.brMax &= 0x0F;
+    int8_t brMax = eeParamGet()->brMax;
 
-    saveEeParam();
+    showParam(masked, brMax, LABEL_BRIGHTNESS, ICON_BRIGHTNESS);
+
+    matrixSetBrightness(brMax);
 }
 
-void changeCorrection(void)
+void showCorrection(uint8_t masked)
 {
-    eep.corr += direction;
-    if (eep.corr > 55 || eep.corr < -55) {
-        eep.corr = 0;
-    }
+    int8_t corr = eeParamGet()->corr;
 
-    saveEeParam();
-}
+    char sign = (corr < 0 ? ICON_LESS : (corr > 0 ? ICON_MORE : ICON_EQUAL));
 
-void showBrightness(uint32_t mask)
-{
-    showParam(mask, eep.brMax, LABEL_BRIGHTNESS, ICON_BRIGHTNESS);
+    if (corr < 0)
+        corr = -corr;
 
-    matrixSetBrightness(eep.brMax);
-}
-
-void showCorrection(uint32_t mask)
-{
-    int8_t val = eep.corr;
-
-    char sign = (val < 0 ? ICON_LESS : (val > 0 ? ICON_MORE : ICON_EQUAL));
-
-    if (val < 0)
-        val = -val;
-
-    showParam(mask, val, LABEL_CORRECTION, sign);
+    showParam(masked, corr, LABEL_CORRECTION, sign);
 }
 
 void checkAlarm(void)
@@ -490,15 +448,18 @@ void checkAlarm(void)
     static uint8_t rtcCorrected = 0;
 
     rtcReadTime();
+    EE_Param *eep = eeParamGet();
+
+    int8_t corr = eep->corr;
 
     if (!rtcCorrected) {
         if (rtc.wday == 1 && rtc.hour == 3 && rtc.min == 0) {
-            if ((rtc.sec == 0) && (eep.corr > 0)) {
-                rtc.sec += eep.corr;
+            if ((rtc.sec == 0) && (corr > 0)) {
+                rtc.sec += corr;
                 rtcCorrSec();
                 rtcCorrected = 1;
-            } else if ((rtc.sec == 59) && (eep.corr < 0)) {
-                rtc.sec += eep.corr;
+            } else if ((rtc.sec == 59) && (corr < 0)) {
+                rtc.sec += corr;
                 rtcCorrSec();
                 rtcCorrected = 1;
             }
@@ -513,10 +474,10 @@ void checkAlarm(void)
             // Check alarm
             if (rtc.hour == alarm.hour && rtc.min == alarm.min) {
                 if (*((int8_t *)&alarm.mon + ((rtc.wday + 5) % 7)))
-                    alarmTimer = 60 * (uint16_t)eep.alarmTimeout;
+                    alarmTimer = 60 * (uint16_t)eep->alarmTimeout;
             } else {
                 // Check new hour
-                if (rtc.hour > alarm.hour && rtc.min == 0 && eep.hourSignal)
+                if (rtc.hour > alarm.hour && rtc.min == 0 && eep->hourSignal)
                     startBeeper(BEEP_LONG);
             }
         }
@@ -531,6 +492,7 @@ void calcBrightness(void)
 
     static uint8_t adcOld;
     uint8_t adc = ADCH;
+    int8_t brMax = eeParamGet()->brMax;
 
     // Use ADC if we have photoresistor
     if (adc > 4) {
@@ -543,13 +505,13 @@ void calcBrightness(void)
     } else {
         // Calculate br(hour) instead
         if (rtc.hour <= 12)
-            br = (rtc.hour * 2) - 25 + eep.brMax;
+            br = (rtc.hour * 2) - 25 + brMax;
         else
-            br = 31 - (rtc.hour * 2) + eep.brMax;
+            br = 31 - (rtc.hour * 2) + brMax;
     }
 
-    if (br > eep.brMax)
-        br = eep.brMax;
+    if (br > brMax)
+        br = brMax;
     if (br < 0)
         br = 0;
 

@@ -17,8 +17,6 @@ static void rtcWeekDay(void)
     m = (uint8_t)(rtc.month + 12 * a - 2);
 
     rtc.wday = (rtc.date + y + (y / 4) + ((31 * m) / 12)) % 7;
-    if (rtc.wday == 0)
-        rtc.wday = 7;
 }
 
 static int8_t rtcDaysInMonth(void)

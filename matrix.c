@@ -11,8 +11,6 @@
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
 
-EE_Param eep;
-
 static int16_t _col;                        // Current position
 
 uint8_t fb[MATRIX_BUFFER_SIZE];
@@ -29,12 +27,12 @@ static volatile uint8_t scrollData = 0x00;
 
 static volatile uint8_t scrollMode = MATRIX_SCROLL_OFF;
 
-static void matrixLoadCharFb(char code, uint8_t numSize)
+static void matrixLoadCharFb(uint8_t code, uint8_t numSize)
 {
     uint8_t i;
     uint8_t data;
     const uint8_t *oft;
-    char chOft;
+    uint8_t chOft;
 
     const uint8_t *font = font_cp1251_08;
     uint8_t width = MATRIX_FONT_WIDTH;
@@ -58,7 +56,7 @@ static void matrixLoadCharFb(char code, uint8_t numSize)
     } else {
         chOft = code - ' ';
         // TODO: Remove it with full font
-        if (code & 0x80)
+        if (code > 128)
             chOft -= 0x20;
     }
 
@@ -81,7 +79,7 @@ static void matrixLoadCharFb(char code, uint8_t numSize)
         fbNew[_col++] = 0x00;
 }
 
-static void matrixLoadScrollChar(char ch)
+static void matrixLoadScrollChar(uint8_t ch)
 {
     fbStr[fbStrPos++] = ch;
     fbStr[fbStrPos] = '\0';
@@ -90,16 +88,16 @@ static void matrixLoadScrollChar(char ch)
 void matrixInit(void)
 {
     matrixInitDriver();
-    scrollTimer = eep.scrollInterval;
+    scrollTimer = eeParamGet()->scrollInterval;
 }
 
-void matrixSetBrightness(int8_t brightness)
+void matrixSetBrightness(uint8_t brightness)
 {
     if (scrollMode == MATRIX_SCROLL_OFF) {
 #if defined(_HT1632)
-        ht1632SendCmd((uint8_t)(HT1632_CMD_DUTY | brightness));
+        ht1632SendCmd(HT1632_CMD_DUTY | brightness);
 #else
-        max7219SendCmd(MAX7219_INTENSITY, (uint8_t)brightness);
+        max7219SendCmd(MAX7219_INTENSITY, brightness);
 #endif
     }
 }
@@ -179,13 +177,13 @@ void matrixScrollAndADCInit(void)
 ISR (TIMER2_OVF_vect)
 {
     int8_t i;
-    char code;
+    uint8_t code;
 
     if (scrollMode == MATRIX_SCROLL_ON) {
         if (*ptrStr) {
             if (chCol < 5) {
                 code = *ptrStr;
-                code -= (code & 0x80 ? 0x40 : 0x20);
+                code -= (code > 128 ? 0x40 : 0x20);
                 scrollData = pgm_read_byte(font_cp1251_08 + code * 5 + chCol);
                 if (scrollData == VOID)
                     chCol = 5;
@@ -202,7 +200,7 @@ ISR (TIMER2_OVF_vect)
             matrixWrite();
         } else {
             scrollMode = MATRIX_SCROLL_OFF;
-            scrollTimer = eep.scrollInterval;
+            scrollTimer = eeParamGet()->scrollInterval;
         }
     } else {
         ptrStr = fbStr;
@@ -225,7 +223,7 @@ void matrixHwScroll(uint8_t status)
         matrixLoadScrollChar(' ');
 
     scrollMode = status;
-    scrollTimer = eep.scrollInterval;
+    scrollTimer = eeParamGet()->scrollInterval;
 }
 
 uint8_t matrixGetScrollMode(void)
@@ -241,13 +239,13 @@ void matrixScrollAddString(char *string)
 
 void matrixScrollAddStringEeprom(uint8_t *string)
 {
-    char ch;
+    uint8_t ch;
     uint8_t i = 0;
 
-    ch = (char)eeprom_read_byte(&string[i++]);
+    ch = eeprom_read_byte(&string[i++]);
     while (ch) {
         matrixLoadScrollChar(ch);
-        ch = (char)eeprom_read_byte(&string[i++]);
+        ch = eeprom_read_byte(&string[i++]);
     }
 }
 
@@ -267,9 +265,9 @@ void matrixFbNewAddStringEeprom(uint8_t *string)
 inline uint8_t swapBits(uint8_t data) __attribute__((always_inline));
 inline uint8_t swapBits(uint8_t data)
 {
-    data = ((data & 0xF0) >> 4) | ((data << 4) & 0xF0);
-    data = ((data & 0xCC) >> 2) | ((data << 2) & 0xCC);
-    data = ((data & 0xAA) >> 1) | ((data << 1) & 0xAA);
+    data = ((data >> 4) & 0x0F) | ((data << 4) & 0xF0);
+    data = ((data >> 2) & 0x33) | ((data << 2) & 0xCC);
+    data = ((data >> 1) & 0x55) | ((data << 1) & 0xAA);
 
     return data;
 }
@@ -285,14 +283,15 @@ void matrixWrite(void)
     uint8_t bit;
 
     // Rotate magic
+    uint8_t rotate = eeParamGet()->rotate;
 
     for (mp = 0, mn = MATRIX_CNT - 1; mp < MATRIX_CNT; mp++, mn--) {
-        m = (eep.rotate & BIT_MIRROR) ? mn : mp;
+        m = (rotate & BIT_MIRROR) ? mn : mp;
 
         for (rp = 0, rn = 7; rp < 8; rp++, rn--) {
-            r = (eep.rotate & BIT_SCAN) ? rn : rp;
+            r = (rotate & BIT_SCAN) ? rn : rp;
 
-            if (eep.rotate & BIT_ROTATE) {
+            if (rotate & BIT_ROTATE) {
                 data = 0;
                 uint8_t bs = 0x01;
                 for (bit = 0; bit < 8; bit++) {
@@ -304,7 +303,7 @@ void matrixWrite(void)
                 data = fb[m * 8 + r];
             }
 
-            if (eep.rotate & BIT_SWAP)
+            if (rotate & BIT_SWAP)
                 data = swapBits(data);
 
             *pRaw++ = data;
